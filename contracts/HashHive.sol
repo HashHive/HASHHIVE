@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
+import "base64-sol/base64.sol";
 
 contract HashHive is ERC721, ERC721URIStorage, Ownable {
 
@@ -13,6 +14,7 @@ contract HashHive is ERC721, ERC721URIStorage, Ownable {
 
     Counters.Counter private _tokenIdCounter;
     uint256 public fees;
+    uint256 public totalSupply;
 
 
     constructor(
@@ -23,7 +25,35 @@ contract HashHive is ERC721, ERC721URIStorage, Ownable {
         fees = fees_;
     }
 
-    function safeMint(address to, string memory uri) public payable {
+    function setFee(uint256 _newFee) public {
+        fees = _newFee;
+    }
+
+    function createUri(string memory _title, string memory _text)
+        internal
+        pure
+        returns (string memory uri)
+    {
+        uri = string(
+            abi.encodePacked(
+                "data:application/json;base64,",
+                Base64.encode(
+                    bytes(
+                        abi.encodePacked(
+                            '{"title":"',
+                            _title,
+                            '","text":"',
+                            _text,
+                           '"}'
+                        )
+                    )
+                )
+            )
+        );
+    }
+
+
+    function  safeMint(address to, string memory _title, string memory _text) public payable {
 
         require(msg.value >= fees, "Not enough DCM");
         payable(owner()).transfer(fees);
@@ -32,9 +62,9 @@ contract HashHive is ERC721, ERC721URIStorage, Ownable {
 
         uint256 tokenId = _tokenIdCounter.current();
         _tokenIdCounter.increment();
+        totalSupply ++;
         _safeMint(to, tokenId);
-        _setTokenURI(tokenId, uri);
-
+        _setTokenURI(tokenId, createUri(_title, _text)); 
         //Return extra fees
 
         uint256 contractBalance = address(this).balance;
@@ -45,8 +75,6 @@ contract HashHive is ERC721, ERC721URIStorage, Ownable {
 
 
     }
-
-
 
     // Override Functions
 
